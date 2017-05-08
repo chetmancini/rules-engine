@@ -19,14 +19,11 @@
   (filter (complement set?)
           (rest (tree-seq set? seq (set v)))))
 
-(defn rotate [v n]
-  (let [cv (count v), n (mod n cv)]
-    (concat (subvec v n cv) (subvec v 0 n))))
-
 (defn- get-all-outputs [rules]
   (into #{} (map get-rule-output rules)))
 
 (defn partition-rules
+  "Given a set of rules, return both the inputs and outputs"
   [rules]
   (let [all-inputs (into #{} (flatten-sets (map get-rule-inputs rules)))
         all-outputs (get-all-outputs rules)]
@@ -53,7 +50,7 @@
 (defn rules-to-map [rules]
   (into {} (map (fn [rule] [(get-rule-output rule) (get-rule-inputs rule)]) rules)))
 
-(defn traverse [rulemap candidates acc]
+(defn- traverse [rulemap candidates acc]
   (if (empty? candidates)
     acc
     (let [candidate (first candidates)
@@ -62,11 +59,15 @@
         (traverse rulemap (union (disj candidates candidate) (get rulemap candidate)) acc)
         (traverse rulemap (disj candidates candidate) (conj acc candidate))))))
 
-(defn get-smallest-inputs [rules output]
+(defn get-fewest-inputs
+  "Given a set of rules, what are the fewest inputs that can determine a given output"
+  [rules output]
   (let [rulemap (rules-to-map rules)]
     (traverse rulemap (get rulemap output) [])))
 
-(defn get-input-mapping [rules]
+(defn get-input-mapping
+  "Show all sets of fewest inputs for all outputs in rules."
+  [rules]
   (into {} (map (fn [output]
-                  [output (get-smallest-inputs rules output)])
+                  [output (get-fewest-inputs rules output)])
                 (get-all-outputs rules))))
