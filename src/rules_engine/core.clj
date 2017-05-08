@@ -1,5 +1,6 @@
 (ns rules-engine.core
-  (:require [clojure.set :refer [difference subset? union]])
+  (:require [clojure.set :refer [difference subset? union]]
+            [clojure.math.combinatorics :as combo])
   (:gen-class))
 
 (defn -main [& args]
@@ -37,15 +38,19 @@
                  (conj assertions (get-rule-output rule))
                  assertions))
 
-(defn run-inference
-  "Recurison easy with assertions as the accumulator, but head may need to be swapped to guarantee completion
-  Failure modes not implemented"
-  [rules assertions]
-  (if (empty? rules)
+(defn- run-inference-safe
+  [rules assertions guard]
+  (if (or (empty? rules) (= guard (count rules)))
     assertions
     (if (can-infer? (first rules) assertions)
-      (run-inference (rest rules) (infer (first rules) assertions))
-      (run-inference (concat (rest rules) [(first rules)]) assertions))))
+      (run-inference-safe (rest rules) (infer (first rules) assertions) 0)
+      (run-inference-safe (concat (rest rules) [(first rules)]) assertions (+ guard 1)))))
+
+(defn run-inference
+  "Recurison easy with assertions as the accumulator, but head may need to be swapped to guarantee completion.
+  A guard makes sure we don't get infinite recursion"
+  [rules assertions]
+  (run-inference-safe rules assertions 0))
 
 (defn rules-to-map [rules]
   (into {} (map (fn [rule] [(get-rule-output rule) (get-rule-inputs rule)]) rules)))
@@ -71,3 +76,15 @@
   (into {} (map (fn [output]
                   [output (get-fewest-inputs rules output)])
                 (get-all-outputs rules))))
+
+(defn- make-combinations [inputs]
+  (->> inputs
+       (combo/subsets)
+       (remove empty?)
+       (map set)))
+
+(defn all-combinations-inferences [rules]
+  (let [safe-inference (fn [inputs]
+                         (difference (run-inference rules inputs) inputs))]
+    (into {} (map (fn [in-subset] [in-subset (safe-inference in-subset)])
+                  (make-combinations (vec (first (partition-rules rules))))))))
