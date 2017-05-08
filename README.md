@@ -8,15 +8,15 @@ A simple rules engine in Clojure
 
 ## Options
 
-FIXME: listing of options this app accepts.
-
 ## Examples
 
-...
+Example rules one might input
+```
+[[:a :b] :-> :c]
+[[:c :d :e] :-> :f]
+```
 
 ### Bugs
-
-Not yet failing gracefully on invalid input.
 
 ## License
 
